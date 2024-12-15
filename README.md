@@ -1,23 +1,83 @@
-Project Description: Sales Analysis in a Bakery Shop: A Data Mining Approach
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from mlxtend.frequent_patterns import apriori, association_rules
+import networkx as nx
 
-This project explores the sales data from a French bakery to uncover meaningful insights using data mining techniques. By analyzing the dataset, which includes details such as date, time, product, quantity, and price, the project aims to identify patterns and trends in customer behavior.
+# Load the dataset
+file_path = "C:\\Users\\Veena\\Desktop\\Analysis\\Bakery sales.csv"  # Change as needed
+df = pd.read_csv(file_path)
 
-The study focuses on the following aspects:
+# Basic Information about the dataset
+print("Dataset Shape:", df.shape)
+print("\nDataset Info:")
+df.info()
+print("\nFirst 10 Rows of the Dataset:")
+print(df.head(10))
 
-Data Preprocessing:
+# Check number of unique items in the 'article' column
+print("\nNumber of unique items:", df['article'].nunique())
+print("\nList of unique items:")
+print(df['article'].unique())
 
-Ensuring data quality by addressing potential issues like missing or mistyped values.
-Applying one-hot encoding for transaction analysis.
-Methodology:
+# Check how many rows have 'NONE' as an item
+none_count = (df['article'] == "NONE").sum()
+print(f"\nNumber of rows with 'NONE' as an article: {none_count}")
 
-The Apriori algorithm is utilized to identify frequent itemsets with a support threshold of 1%.
-Association rules are derived to understand relationships between items, helping to reveal cross-selling opportunities and customer buying habits.
-Findings:
+# Visualize the 20 most sold items
+print("\n20 Most Sold Items at the Shop:")
+top_items = df['article'].value_counts().head(20)
+plt.figure(figsize=(16, 7))
+sns.barplot(x=top_items.index, y=top_items.values, palette="viridis")
+plt.xlabel('Article')
+plt.ylabel('Number of Transactions')
+plt.title('20 Most Sold Items at the Shop')
+plt.xticks(rotation=45)
+plt.show()
 
-Products like "Baguette" and "Banette" are the most frequently sold items.
-Association rules suggest strong correlations, such as customers purchasing "BOULE 200G" often buying "COUPE."
-Applications:
+# Prepare the dataset for Market Basket Analysis
+# Step 1: Group data by transaction and article, then create a pivot table
+print("\nPreparing data for Market Basket Analysis...")
+hot_encoded_df = df.groupby(['ticket_number', 'article'])['article'].count().unstack().fillna(0)
 
-Insights can guide inventory management, promotional strategies, and product placements.
-Long-term analysis may reveal seasonal trends, enabling targeted marketing.
-This analysis highlights the potential of data mining for strategic decision-making in retail, demonstrating how understanding customer preferences can lead to improved business outcomes.
+# Step 2: Convert counts into binary format (0/1) for presence/absence of an item
+hot_encoded_df = (hot_encoded_df > 0).astype(bool)
+print("\nHot Encoded Data (First 5 rows):")
+print(hot_encoded_df.head())
+
+# Apply Apriori algorithm to find frequent itemsets
+min_support = 0.01  # Minimum support threshold
+print("\nApplying Apriori Algorithm...")
+frequent_itemsets = apriori(hot_encoded_df, min_support=min_support, use_colnames=True)
+print("\nFrequent Itemsets (Top 10):")
+print(frequent_itemsets.head(10))
+
+# Generate Association Rules
+min_lift = 1  # Minimum lift threshold
+print("\nGenerating Association Rules...")
+rules = association_rules(frequent_itemsets, metric="lift", min_threshold=min_lift)
+
+# Sort rules by confidence
+rules.sort_values('confidence', ascending=False, inplace=True)
+
+# Display top 10 association rules
+print("\nTop 10 Association Rules:")
+print(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head(10))
+
+# Visualize the association rules using a network graph
+print("\nVisualizing Association Rules...")
+G = nx.from_pandas_edgelist(
+    rules, 'antecedents', 'consequents', 
+    edge_attr=['support', 'confidence', 'lift']
+)
+
+plt.figure(figsize=(12, 8))
+pos = nx.spring_layout(G)
+nx.draw(
+    G, pos, with_labels=True, node_size=3000, node_color="lightblue", 
+    font_size=10, font_color="black", edge_color="gray"
+)
+plt.title("Association Rules Network")
+plt.show()
