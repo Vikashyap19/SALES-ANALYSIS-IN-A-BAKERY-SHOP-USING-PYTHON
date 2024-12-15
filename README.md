@@ -7,7 +7,7 @@ from mlxtend.frequent_patterns import apriori, association_rules
 import networkx as nx
 
 # Load the dataset
-file_path = "C:\\Users\\Veena\\Desktop\\Analysis\\Bakery sales.csv"  # Change as needed
+file_path = ""  # 
 df = pd.read_csv(file_path)
 
 # Basic Information about the dataset
